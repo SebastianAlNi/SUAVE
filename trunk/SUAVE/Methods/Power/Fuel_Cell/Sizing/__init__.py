@@ -4,3 +4,4 @@
 
 from .initialize_from_power import initialize_from_power
 from .initialize_larminie_from_power import initialize_larminie_from_power 
+from .initialize_from_power_kulikovsky import initialize_from_power_kulikovsky

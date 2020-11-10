@@ -4,6 +4,7 @@
 
 from .zero_fidelity import zero_fidelity
 from .larminie import larminie
+from .kulikovsky import kulikovsky
 
 from .setup_larminie import setup_larminie
 from .find_voltage_larminie import find_voltage_larminie

@@ -194,6 +194,22 @@ class Vortex_Lattice(Aerodynamics):
         hsup_max    = self.hsup_max
         AoA         = conditions.aerodynamics.angle_of_attack.T[0]
         Mach        = conditions.freestream.mach_number.T[0]
+        '''#-----------------------------------
+        
+        try:
+            # Check whether surrogate model already exists
+            #surrogates = self.surrogates 
+            lift_model = surrogates.lift_coefficient
+        except:
+            # If surrogate model does not exist yet, call functions to build it
+            print('Building surrogate')
+            # Sample training data
+            self.sample_training()
+                        
+            # Build surrogate
+            self.build_surrogate()
+        
+        #---------------------------'''
         
         # Unapck the surrogates
         CL_surrogate_sub          = surrogates.lift_coefficient_sub  

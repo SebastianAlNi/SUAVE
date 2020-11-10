@@ -408,5 +408,5 @@ class Propeller(Energy_Component):
                     power                             = power,
                     power_coefficient                 = Cp,                      
             ) 
-    
+        
         return thrust, torque, power, Cp, outputs , etap
