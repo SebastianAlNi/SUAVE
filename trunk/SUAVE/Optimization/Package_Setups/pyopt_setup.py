@@ -110,7 +110,7 @@ def Pyopt_Solve(problem,solver='SNOPT',FD='single', sense_step=1.0E-6,  nonderiv
         
     elif solver == 'SLSQP':
         import pyOpt.pySLSQP
-        opt = pyOpt.pySLSQP.SLSQP()
+        opt = pyOpt.SLSQP()
         opt.setOption('MAXIT', 200)
     elif solver == 'KSOPT':
         import pyOpt.pyKSOPT

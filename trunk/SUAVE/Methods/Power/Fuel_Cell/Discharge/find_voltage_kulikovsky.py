@@ -42,7 +42,7 @@ def find_voltage_kulikovsky(j0, fuel_cell):
     '''
         #POLCURVE  Analytical Fuel Cell Model after Kulikovsky 2014 JES 161(3) F263-70
     #
-    #   [V_cell] = polcurve(j_0,p)  returns the cell voltage V_cell for a given vector of cell current densities j_0   
+    #   [V_cell] = polcurve(j_0,p)  returns the cell voltage V_cell for a given cell current density j_0   
     #
     #   [V_cell, eta_0] = polcurve(j_0,p)  additionally returns the cell overpotential eta_0
     #

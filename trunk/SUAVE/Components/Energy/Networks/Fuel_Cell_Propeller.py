@@ -131,12 +131,10 @@ class Fuel_Cell_Propeller(Propulsor):
         
         # step 4
         F, Q, P, Cp, outputs , etap = propeller.spin(conditions)
-        #print('F: ', F)
-        #print('P: ', P)
-        rank = comm.Get_rank()
-        print('Rank: ', rank)
-        print('Cp: ', Cp[0])
-        #print('etap: ', etap)
+
+        #rank = comm.Get_rank()
+        #print('Rank: ', rank)
+        #print('Cp: ', Cp[0])
         
         # Check to see if magic thrust is needed, the ESC caps throttle at 1.1 already
         eta        = conditions.propulsion.throttle[:,0,None]
@@ -174,16 +172,18 @@ class Fuel_Cell_Propeller(Propulsor):
         
         # Pack the conditions for outputs
         rpm                  = motor.outputs.omega / Units.rpm
-        current              = esc.outputs.currentin
+        #current              = esc.outputs.currentin
+        current              = fuel_cell.inputs.current
         fuel_cell_draw       = fuel_cell.inputs.power_in
         voltage_under_load   = fuel_cell.voltage_under_load
+        cell_voltage         = fuel_cell.cell_voltage
         j0                   = fuel_cell.j0
         efficiency           = fuel_cell.efficiency
         omega_motor          = motor.outputs.omega
         omega_prop           = propeller.inputs.omega
 		
 		# Calculate thrust coefficient
-        Ct = F / (conditions.freestream.density * (rpm/60)**2 * (propeller.tip_radius*2)**4) # is /60 correct? Or maybe /60 and 2 pi?
+        Ct = F / (conditions.freestream.density * (rpm/60.0)**2 * (propeller.tip_radius*2)**4) # is /60 correct? Or maybe /60 and 2 pi?
 
         #print(conditions.freestream.density)
         #print(rpm)
@@ -195,6 +195,7 @@ class Fuel_Cell_Propeller(Propulsor):
         conditions.propulsion.fuel_cell_draw       = fuel_cell_draw
         conditions.propulsion.motor_voltage        = esc.outputs.voltageout
         conditions.propulsion.voltage_under_load   = voltage_under_load
+        conditions.propulsion.cell_voltage         = cell_voltage
         conditions.propulsion.j0                   = j0
         conditions.propulsion.fuel_cell_efficiency = efficiency
         conditions.propulsion.motor_torque         = motor.outputs.torque

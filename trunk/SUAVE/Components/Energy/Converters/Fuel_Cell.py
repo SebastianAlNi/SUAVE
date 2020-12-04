@@ -56,6 +56,7 @@ class Fuel_Cell(Energy_Component):
         self.mass_density   = 1203.208556 *Units.kg/Units.m**3.   # take default as specs from Nissan 2011 fuel cell            
         self.volume         = 0.0
         self.max_power      = 0.0
+        self.fuel_utilization = 0.95                              # can be more if recirculation of anode gas is used
         self.discharge_model= zero_fidelity
         
     def energy_calc(self,conditions,numerics):

@@ -237,8 +237,14 @@ def empty(vehicle):
         mac_w      = vehicle.wings['main_wing'].chords.mean_aerodynamic
         wing_c_r   = vehicle.wings['main_wing'].chords.root
         #now run weight script for the wing
-        wt_wing                                         = wing_main(S_gross_w, m_fuel, AR_w, sweep_w, q_c, taper_w, t_c_w,Nult,TOW)
-        vehicle.wings['main_wing'].mass_properties.mass = wt_wing        
+        #wt_wing                                         = wing_main(S_gross_w, m_fuel, AR_w, sweep_w, q_c, taper_w, t_c_w,Nult,TOW)
+        # Fuel cell is in the main wing, so use fuel cell mass instead of fuel mass for wing mass estimation
+        wt_wing                                         = wing_main(S_gross_w, wt_fuel_cell, AR_w, sweep_w, q_c, taper_w, t_c_w,Nult,TOW)
+        vehicle.wings['main_wing'].mass_properties.mass = wt_wing
+        
+        '''for i in range(10, 41):
+            wt_wing     = wing_main(S_gross_w, wt_fuel_cell, i, sweep_w, q_c, taper_w, t_c_w,Nult,TOW)
+            print(i, wt_wing.item(0))'''
    
     if 'horizontal_stabilizer' not in vehicle.wings:
         wt_tail_horizontal = 0.0

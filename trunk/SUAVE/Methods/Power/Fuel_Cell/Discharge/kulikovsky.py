@@ -51,16 +51,20 @@ def kulikovsky(fuel_cell,conditions,numerics):
 
     # Polarization curve
     V_cell = find_voltage_kulikovsky(j0, fuel_cell)
+    fuel_cell.cell_voltage = V_cell
 
     # efficiency
-    fuel_cell.efficiency = np.divide(V_cell, 1.253) # production of water vapor
+    #fuel_cell.efficiency = np.divide(V_cell, 1.253) # production of water vapor
     # fuel_cell.efficiency_th = V_cell/1.481 % production of liquid water
+    fuel_cell.efficiency = np.divide(V_cell, 1.48) # production of liquid water
 
     #P_nd = np.divide(P, max(P))
     #eta_nd = np.divide(eta, max(eta))
 	
     # Pack outputs
     fuel_cell.voltage_under_load   = np.multiply(V_cell, fuel_cell.cells_in_series)
-    mdot       = np.divide(np.multiply(fuel_cell.voltage_under_load, fuel_cell.inputs.current), np.multiply(fuel_cell.propellant.specific_energy, fuel_cell.efficiency))
+    mdot_fc = np.divide(np.multiply(fuel_cell.voltage_under_load, fuel_cell.inputs.current), np.multiply(fuel_cell.propellant.specific_energy, fuel_cell.efficiency))
+    
+    mdot    = np.divide(mdot_fc, fuel_cell.fuel_utilization)
    
     return mdot
