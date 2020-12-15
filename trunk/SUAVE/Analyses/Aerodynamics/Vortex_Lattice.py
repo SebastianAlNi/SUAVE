@@ -73,7 +73,9 @@ class Vortex_Lattice(Aerodynamics):
         self.training                                = Data()    
         self.training.angle_of_attack                = np.array([[-5., -2. , 0.0 , 2.0, 5.0 , 8.0, 10.0 , 12.]]).T * Units.deg 
         self.training.Mach                           = np.array([[0.0, 0.1  , 0.2 , 0.3,  0.5,  0.75 , 0.85 , 0.9,\
-                                                                  1.3, 1.35 , 1.5 , 2.0, 2.25 , 2.5  , 3.0  , 3.5]]).T                                                                    
+                                                                  1.3, 1.35 , 1.5 , 2.0, 2.25 , 2.5  , 3.0  , 3.5]]).T   
+        #self.training.Mach                           = np.array([[0.0, 0.05, 0.1, 0.15 , 0.2, 0.25, 0.3, 0.35,\
+        #                                                          1.3, 1.35 , 1.5 , 2.0, 2.25 , 2.5  , 3.0  , 3.5]]).T                                                                    
         self.training.lift_coefficient_sub           = None
         self.training.lift_coefficient_sup           = None
         self.training.wing_lift_coefficient_sub      = None
@@ -474,6 +476,7 @@ class Vortex_Lattice(Aerodynamics):
         geometry       = self.geometry
         Mach           = training.Mach
         AoA_data       = training.angle_of_attack[:,0]
+        #print('Mach: ', Mach)
         sub_sup_split  = np.where(Mach < 1.0)[0][-1] + 1 
         mach_data_sub  = training.Mach[0:sub_sup_split,0]
         mach_data_sup  = training.Mach[sub_sup_split:,0]
