@@ -3,17 +3,18 @@
 # 
 # Created:  Dec 2013, SUAVE Team
 # Modified: Jan 2016, E. Botero
-#           Apr 2020, M. Clarke     
-#           Jun 2020, E. Botero
+#                     S. Karpuk
+       
 
 # ----------------------------------------------------------------------
 #  Imports
 # ----------------------------------------------------------------------
 
 # suave imports
-from SUAVE.Core import Data
+from SUAVE.Core import Data, Units
 
 # package imports
+import math  as m
 import numpy as np
 
 # ----------------------------------------------------------------------
@@ -25,41 +26,27 @@ def induced_drag_aircraft(state,settings,geometry):
     """Determines induced drag for the full aircraft
 
     Assumptions:
-    This function operates in one of three ways:
-       -An oswald efficiency is provided. All induced drag, inviscid and viscous, is use calculated using that factor
-       -A span efficiency is provided. The inviscid induced drag is calculated from that. Viscous induced drag is
-            calculated using the viscous_lift_dependent_drag_factor, K, and the parasite drag.
-       -The inviscid induced drag from the the lift calculation for each wing, usually a vortex lattice, is used. Viscous induced drag is
-            calculated using the viscous_lift_dependent_drag_factor, K, and the parasite drag.
-            
-        The last two options do not explicitly provide for the case where the fuselage produces an induced drag directly.
+    Based on fits
 
     Source:
     adg.stanford.edu (Stanford AA241 A/B Course Notes)
-    http://aerodesign.stanford.edu/aircraftdesign/aircraftdesign.html
+    M. Nita, D. Scholz, 'Estimating the Oswald Factor from Basic Aircraft Geometrical Parameters'
+        hamburg University of Applied Sciences, Aero - Aircraft Design and Systems Group
 
     Inputs:
-    state.conditions.aerodynamics.
-        lift_coefficient                                               [Unitless]
-        lift_breakdown.inviscid_wings[wings.*.tag]                     [Unitless]
-        drag_breakdown.induced.inviscid                                [Unitless]
-        drag_breakdown.induced.inviscid_wings[wings.*.tag]             [Unitless]
-        drag_breakdown.parasite[wings.*.tag].parasite_drag_coefficient [Unitless]
-        drag_breakdown.parasite[wings.*.tag].reference_area            [m^2]
-    settings.oswald_efficiency_factor                                  [Unitless]
-    settings.viscous_lift_dependent_drag_factor                        [Unitless]
-    settings.span_efficiency                                           [Unitless]
-    
+    state.conditions.aerodynamics.lift_coefficient               [Unitless]
+    state.conditions.aerodynamics.drag_breakdown.parasite.total  [Unitless]
+    configuration.oswald_efficiency_factor                       [Unitless]
+    configuration.viscous_lift_dependent_drag_factor             [Unitless]
+    geometry.wings['main_wing'].span_efficiency                  [Unitless]
+    geometry.wings['main_wing'].aspect_ratio                     [Unitless]
+    geometry.wings['main_wing'].spans.projected                  [m]
+    geometry.wings['main_wing'].sweeps.quarter_chord             [rad]
+    geometry.wings['main_wing'].taper                            [Unitless]
+    geometry.fuselages['fuselage'].width                         [m]
 
     Outputs:
-    conditions.aerodynamics.drag_breakdown.induced.
-         total                                                         [Unitless]
-         viscous                                                       [Unitless]
-         oswald_efficiency_factor                                      [Unitless]
-         viscous_wings_drag                                            [Unitless]
-    
-    total_induced_drag                                                 [Unitless]
-    
+    total_induced_drag                                           [Unitless]
 
     Properties Used:
     N/A
@@ -68,81 +55,68 @@ def induced_drag_aircraft(state,settings,geometry):
     # unpack inputs
     conditions    = state.conditions
     configuration = settings
-    wings         = geometry.wings
     
-    K       = configuration.viscous_lift_dependent_drag_factor
-    e_osw   = configuration.oswald_efficiency_factor	
-    e_span  = configuration.span_efficiency
-    CL      = conditions.aerodynamics.lift_coefficient
-    CDi     = conditions.aerodynamics.drag_breakdown.induced.inviscid
-    S_ref   = geometry.reference_area
+    aircraft_lift = conditions.aerodynamics.lift_coefficient
+    mach          = conditions.freestream.mach_number
+    e             = configuration.oswald_efficiency_factor
+    K             = configuration.viscous_lift_dependent_drag_factor
+    span          = geometry.wings['main_wing'].spans.projected 
+    ar            = geometry.wings['main_wing'].aspect_ratio 
+    CDp           = state.conditions.aerodynamics.drag_breakdown.parasite.total
+    CDc           = state.conditions.aerodynamics.drag_breakdown.compressible.total
+    t_c_w         = geometry.wings['main_wing'].thickness_to_chord
+    taper         = geometry.wings['main_wing'].taper
+    sweep         = geometry.wings['main_wing'].sweeps.quarter_chord #/ Units.degrees
 
-    wing_viscous_induced_drags = Data()
-
-    # If the oswald efficiency factor is not specified (typical case)
-    if e_osw == None:
-
-        # Prime totals
-        area                        = 0.
-        AR                          = 0.01  
-        total_induced_viscous_drag  = 0.
-        total_induced_inviscid_drag = 0.
-        
-        # Go through each wing, and make calculations
-        for wing in wings:
-            tag        = wing.tag
-            ar         = wing.aspect_ratio
-            s_wing     = conditions.aerodynamics.drag_breakdown.parasite[wing.tag].reference_area
-            cl_wing    = conditions.aerodynamics.lift_breakdown.inviscid_wings[tag]
-            cdi_i_wing = conditions.aerodynamics.drag_breakdown.induced.inviscid_wings[tag]
-            cdp_wing   = conditions.aerodynamics.drag_breakdown.parasite[tag].parasite_drag_coefficient
-                
-            cdi_v_wing = K*cdp_wing*(cl_wing**2)
-            total_induced_viscous_drag = total_induced_viscous_drag + (cdi_v_wing)*(s_wing/S_ref)
-            
-            # Does the user specify a span efficiency?
-            if e_span == None:
-                total_induced_inviscid_drag = total_induced_inviscid_drag + cdi_i_wing*(s_wing/S_ref)
-            else:
-                # Override the wings inviscid induced drag
-                cdi_i_wing = (cl_wing**2)/(np.pi*ar*e_span)
-                total_induced_inviscid_drag = total_induced_inviscid_drag + cdi_i_wing*(s_wing/S_ref)
-                
-                # Repack
-                conditions.aerodynamics.drag_breakdown.induced.inviscid_wings[tag] = cdi_i_wing
-            
-            # pack the wing level viscous induced drag
-            wing_viscous_induced_drags[tag] = cdi_v_wing
-            
-            # Save this for later
-            if s_wing > area:
-                area = s_wing
-                AR  = ar
-                
-        total_induced_drag = total_induced_viscous_drag + total_induced_inviscid_drag
-        
-        # Now calculate the vehicle level oswald efficiency
-        e_osw = (CL**2)/(np.pi*AR*total_induced_drag)
-        
-    # If the user specifies a vehicle level oswald efficiency factor
+    
+    if 'fuselage' in geometry.fuselages:
+        d_f = geometry.fuselages['fuselage'].width
     else:
+        d_f = 0
+
+    cl_w      = 0  
+    cos_sweep = np.cos(sweep)
+
+    # get effective Cl and sweep
+    tc = t_c_w /(cos_sweep)
+    cl = cl_w / (cos_sweep*cos_sweep)
+
+    # compressibility drag based on regressed fits from AA241
+    mcc_cos_ws = 0.922321524499352       \
+               - 1.153885166170620*tc    \
+               - 0.304541067183461*cl    \
+               + 0.332881324404729*tc*tc \
+               + 0.467317361111105*tc*cl \
+               + 0.087490431201549*cl*cl
         
-        # Find the largest wing, use that for AR
-        S  = 0.
-        AR = 0.01        
-        for wing in wings:
-            if wing.areas.reference>S:
-                AR = wing.aspect_ratio
-                S  = wing.areas.reference 
-                
-        # Calculate the induced drag       
-        total_induced_drag = CL **2 / (np.pi*AR*e_osw)
-        total_induced_viscous_drag = total_induced_drag - CDi
+    # crest-critical mach number, corrected for wing sweep
+    mcc = mcc_cos_ws / cos_sweep
+
+    # divergence ratio
+    mo_mc = mach/mcc
     
+    # compressibility correlation, Shevell
+    dcdc_cos3g = 0.0019*mo_mc**14.641
     
-    conditions.aerodynamics.drag_breakdown.induced.total                    = total_induced_drag
-    conditions.aerodynamics.drag_breakdown.induced.viscous                  = total_induced_viscous_drag
-    conditions.aerodynamics.drag_breakdown.induced.oswald_efficiency_factor = e_osw
-    conditions.aerodynamics.drag_breakdown.induced.viscous_wings_drag       = wing_viscous_induced_drags
-    
+    # compressibility drag
+    CDc = dcdc_cos3g * cos_sweep*cos_sweep*cos_sweep
+
+    if e == None:
+        dtaper = -0.357+0.45*m.exp(-0.0375*np.abs(sweep)) 
+        s      = 1 - 2 * (d_f/span)**2
+        f      = 0.0524*(taper-dtaper)**4 - 0.15*(taper-dtaper)**3 + \
+                 0.1659*(taper-dtaper)**2 - 0.0706*(taper-dtaper) + 0.0119
+        u      = 1/(1+f*ar) 
+        e      = 1/(1/(u*s)+np.pi*ar*K*(CDp+CDc))
+
+    # start the result
+    total_induced_drag = aircraft_lift**2 / (np.pi*ar*e)
+        
+    # store data
+    conditions.aerodynamics.drag_breakdown.induced = Data(
+        total             = total_induced_drag ,
+        efficiency_factor = e                  ,
+        aspect_ratio      = ar                 ,
+    )
+
     return total_induced_drag
